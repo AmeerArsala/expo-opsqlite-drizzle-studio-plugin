@@ -1,7 +1,7 @@
 import { useDevToolsPluginClient, } from "expo/devtools";
 import { useEffect } from "react";
 export function useDrizzleStudio(db) {
-    const client = useDevToolsPluginClient("expo-drizzle-studio-plugin");
+    const client = useDevToolsPluginClient("expo-opsqlite-drizzle-studio-plugin");
     const queryFn = (db, client) => async (e) => {
         try {
             const data = await db.execute(e.sql, e.params || []);

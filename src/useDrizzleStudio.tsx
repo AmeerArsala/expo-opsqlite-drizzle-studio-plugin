@@ -8,7 +8,7 @@ import {
 import { useEffect } from "react";
 
 export function useDrizzleStudio(db: DB | null) {
-  const client = useDevToolsPluginClient("expo-drizzle-studio-plugin");
+  const client = useDevToolsPluginClient("expo-opsqlite-drizzle-studio-plugin");
 
   const queryFn =
     (db: DB, client: DevToolsPluginClient) =>
