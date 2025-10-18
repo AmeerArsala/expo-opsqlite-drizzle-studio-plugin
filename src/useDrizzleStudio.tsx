@@ -7,6 +7,20 @@ import {
 } from "expo/devtools";
 import { useEffect } from "react";
 
+// Helper function to transform op-sqlite rows (objects) to expo-sqlite format (arrays)
+function transformRows(rows: any[]): any[] {
+  if (!rows || rows.length === 0) return [];
+
+  // If rows are already arrays, return as-is
+  if (Array.isArray(rows[0])) return rows;
+
+  // If rows are objects, convert to arrays maintaining column order
+  const firstRow = rows[0];
+  const columns = Object.keys(firstRow);
+
+  return rows.map(row => columns.map(col => row[col]));
+}
+
 export function useDrizzleStudio(db: DB | null) {
   const client = useDevToolsPluginClient("expo-opsqlite-drizzle-studio-plugin");
 
@@ -17,7 +31,7 @@ export function useDrizzleStudio(db: DB | null) {
         const data = await db.execute(e.sql, e.params || []);
         // Transform op-sqlite response to match expo-sqlite format
         client.sendMessage(`query-${e.id}`, {
-          rows: data.rows || [],
+          rows: transformRows(data.rows || []),
           rowsAffected: data.rowsAffected ?? 0,
           insertId: data.insertId,
         });
@@ -41,7 +55,7 @@ export function useDrizzleStudio(db: DB | null) {
         });
         // Transform each result to match expo-sqlite format
         const finalResults = results.map((r) => ({
-          rows: (r as QueryResult).rows || [],
+          rows: transformRows((r as QueryResult).rows || []),
           rowsAffected: (r as QueryResult).rowsAffected ?? 0,
           insertId: (r as QueryResult).insertId,
         }));
