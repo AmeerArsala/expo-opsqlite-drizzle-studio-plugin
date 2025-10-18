@@ -1,6 +1,6 @@
 {
   "name": "expo-opsqlite-drizzle-studio-plugin",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Expo DevTools Plugin for Drizzle Studio",
   "main": "build/index.js",
   "types": "build/index.d.ts",
