@@ -1,0 +1,8 @@
+idea/
+node_modules/
+
+# macOS
+.DS_Store
+
+# Metro
+.metro-cache/
