@@ -15,7 +15,12 @@ export function useDrizzleStudio(db: DB | null) {
     async (e: { sql: string; params?: any[]; id: string }) => {
       try {
         const data = await db.execute(e.sql, e.params || []);
-        client.sendMessage(`query-${e.id}`, data.rows || []);
+        // Transform op-sqlite response to match expo-sqlite format
+        client.sendMessage(`query-${e.id}`, {
+          rows: data.rows || [],
+          rowsAffected: data.rowsAffected ?? 0,
+          insertId: data.insertId,
+        });
       } catch (error) {
         client.sendMessage(`query-${e.id}`, {
           error: error instanceof Error ? error.message : String(error),
@@ -34,7 +39,12 @@ export function useDrizzleStudio(db: DB | null) {
             results.push(result);
           }
         });
-        const finalResults = results.map((r) => (r as QueryResult).rows || r);
+        // Transform each result to match expo-sqlite format
+        const finalResults = results.map((r) => ({
+          rows: (r as QueryResult).rows || [],
+          rowsAffected: (r as QueryResult).rowsAffected ?? 0,
+          insertId: (r as QueryResult).insertId,
+        }));
         client.sendMessage(`transaction-${e.id}`, finalResults);
       } catch (error) {
         results.push({

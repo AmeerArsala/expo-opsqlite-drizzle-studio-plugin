@@ -5,7 +5,12 @@ export function useDrizzleStudio(db) {
     const queryFn = (db, client) => async (e) => {
         try {
             const data = await db.execute(e.sql, e.params || []);
-            client.sendMessage(`query-${e.id}`, data.rows || []);
+            // Transform op-sqlite response to match expo-sqlite format
+            client.sendMessage(`query-${e.id}`, {
+                rows: data.rows || [],
+                rowsAffected: data.rowsAffected ?? 0,
+                insertId: data.insertId,
+            });
         }
         catch (error) {
             client.sendMessage(`query-${e.id}`, {
@@ -22,7 +27,12 @@ export function useDrizzleStudio(db) {
                     results.push(result);
                 }
             });
-            const finalResults = results.map((r) => r.rows || r);
+            // Transform each result to match expo-sqlite format
+            const finalResults = results.map((r) => ({
+                rows: r.rows || [],
+                rowsAffected: r.rowsAffected ?? 0,
+                insertId: r.insertId,
+            }));
             client.sendMessage(`transaction-${e.id}`, finalResults);
         }
         catch (error) {
