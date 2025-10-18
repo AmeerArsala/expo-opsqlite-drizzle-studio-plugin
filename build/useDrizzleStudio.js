@@ -10,19 +10,18 @@ function transformRows(rows) {
     // If rows are objects, convert to arrays maintaining column order
     const firstRow = rows[0];
     const columns = Object.keys(firstRow);
-    return rows.map(row => columns.map(col => row[col]));
+    return rows.map((row) => columns.map((col) => row[col]));
 }
 export function useDrizzleStudio(db) {
     const client = useDevToolsPluginClient("expo-opsqlite-drizzle-studio-plugin");
     const queryFn = (db, client) => async (e) => {
         try {
             const data = await db.execute(e.sql, e.params || []);
-            // Transform op-sqlite response to match expo-sqlite format
-            client.sendMessage(`query-${e.id}`, {
-                rows: transformRows(data.rows || []),
-                rowsAffected: data.rowsAffected ?? 0,
-                insertId: data.insertId,
-            });
+            // Transform based on arrayMode (like expo-sqlite's executeForRawResultAsync)
+            const result = e.arrayMode
+                ? transformRows(data.rows || [])
+                : data.rows || [];
+            client.sendMessage(`query-${e.id}`, result);
         }
         catch (error) {
             client.sendMessage(`query-${e.id}`, {
@@ -36,16 +35,11 @@ export function useDrizzleStudio(db) {
             await db.transaction(async (tx) => {
                 for (const query of e.queries) {
                     const result = await tx.execute(query.sql, query.params || []);
-                    results.push(result);
+                    // Send just the rows array, matching expo-sqlite behavior
+                    results.push(result.rows || []);
                 }
             });
-            // Transform each result to match expo-sqlite format
-            const finalResults = results.map((r) => ({
-                rows: transformRows(r.rows || []),
-                rowsAffected: r.rowsAffected ?? 0,
-                insertId: r.insertId,
-            }));
-            client.sendMessage(`transaction-${e.id}`, finalResults);
+            client.sendMessage(`transaction-${e.id}`, results);
         }
         catch (error) {
             results.push({

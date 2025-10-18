@@ -1,5 +1,5 @@
 // useDrizzleStudio.tsx
-import { type DB, type QueryResult } from "@op-engineering/op-sqlite";
+import { type DB /*, type QueryResult*/ } from "@op-engineering/op-sqlite";
 import {
   type DevToolsPluginClient,
   type EventSubscription,
@@ -18,7 +18,7 @@ function transformRows(rows: any[]): any[] {
   const firstRow = rows[0];
   const columns = Object.keys(firstRow);
 
-  return rows.map(row => columns.map(col => row[col]));
+  return rows.map((row) => columns.map((col) => row[col]));
 }
 
 export function useDrizzleStudio(db: DB | null) {
@@ -26,15 +26,19 @@ export function useDrizzleStudio(db: DB | null) {
 
   const queryFn =
     (db: DB, client: DevToolsPluginClient) =>
-    async (e: { sql: string; params?: any[]; id: string }) => {
+    async (e: {
+      sql: string;
+      params?: any[];
+      arrayMode: boolean;
+      id: string;
+    }) => {
       try {
         const data = await db.execute(e.sql, e.params || []);
-        // Transform op-sqlite response to match expo-sqlite format
-        client.sendMessage(`query-${e.id}`, {
-          rows: transformRows(data.rows || []),
-          rowsAffected: data.rowsAffected ?? 0,
-          insertId: data.insertId,
-        });
+        // Transform based on arrayMode (like expo-sqlite's executeForRawResultAsync)
+        const result = e.arrayMode
+          ? transformRows(data.rows || [])
+          : data.rows || [];
+        client.sendMessage(`query-${e.id}`, result);
       } catch (error) {
         client.sendMessage(`query-${e.id}`, {
           error: error instanceof Error ? error.message : String(error),
@@ -45,21 +49,16 @@ export function useDrizzleStudio(db: DB | null) {
   const transactionFn =
     (db: DB, client: DevToolsPluginClient) =>
     async (e: { queries: { sql: string; params?: any[] }[]; id: string }) => {
-      const results: (QueryResult | { error: string })[] = [];
+      const results: any[] = [];
       try {
         await db.transaction(async (tx) => {
           for (const query of e.queries) {
             const result = await tx.execute(query.sql, query.params || []);
-            results.push(result);
+            // Send just the rows array, matching expo-sqlite behavior
+            results.push(result.rows || []);
           }
         });
-        // Transform each result to match expo-sqlite format
-        const finalResults = results.map((r) => ({
-          rows: transformRows((r as QueryResult).rows || []),
-          rowsAffected: (r as QueryResult).rowsAffected ?? 0,
-          insertId: (r as QueryResult).insertId,
-        }));
-        client.sendMessage(`transaction-${e.id}`, finalResults);
+        client.sendMessage(`transaction-${e.id}`, results);
       } catch (error) {
         results.push({
           error: error instanceof Error ? error.message : String(error),
